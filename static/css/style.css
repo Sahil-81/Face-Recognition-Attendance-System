@@ -1,0 +1,8 @@
+.login{
+    max-width: 500px;
+    margin: auto;
+    border: 2px solid red;
+    background-color: aqua;
+    height: 200px;
+    width: 30%;
+}
