@@ -1,0 +1,1 @@
+'course' : "sqlite:///course.db"

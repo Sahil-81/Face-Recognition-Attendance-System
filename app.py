@@ -1,58 +1,177 @@
-from flask import Flask, render_template, Response,redirect,request
+from flask import Flask, render_template, Response,redirect,request,url_for,flash
 import cv2
 import face_recognition
+from datetime import datetime
+from flask_login import LoginManager,current_user,login_user,login_required,UserMixin,logout_user
+from werkzeug.utils import secure_filename
+from flask_bootstrap import Bootstrap
+import uuid as uuid
+import os
 import numpy as np
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-
-# Import for Migrations
 from flask_migrate import Migrate, migrate
- 
+from werkzeug.security import generate_password_hash,check_password_hash
+from models import Loginform,form,AdminForm,course_form,joinCourse
+from sqlalchemy import select
 
 
 app=Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///student.db'
+app.config['SQLALCHEMY_BINDS'] ={'course' : "sqlite:///course.db"}
+app.config['SECRET_KEY']="SECRET"
+app.config['UPLOAD_FOLDER'] = "D:\Engage\static\profile_images"
+Bootstrap(app)
+
 
 #Initialize database
 db = SQLAlchemy(app)
-
 # Settings for migrations
 migrate = Migrate(app, db)
 
-class student(db.Model):
-    id=db.Column(db.Integer,primary_key=True)
+
+class student(UserMixin,db.Model):
+    student_id=db.Column(db.Integer,primary_key=True)
     first_name = db.Column(db.String(100), nullable=False, unique=False)
     last_name = db.Column(db.String(100), nullable=False, unique=False)
-    phone_number=db.Column(db.Sting(10), unique=False, nullable=False)
-    email= db.Column(db.String(100), nullable=False, unique=False)
+    username=db.Column(db.String(100), unique=False, nullable=True)
+    password_hash= db.Column(db.String(128), nullable=False, unique=False)
+    # img = db.Column(db.LargeBinary, nullable=False)
+    img=db.Column(db.String(50), nullable=False)
+    def get_id(self):
+           return (self.student_id)
+    @property
+    def password(self):
+        raise AttributeError('Incorrect password')
+
+    @password.setter
+    def password(self,password):
+        self.password_hash=generate_password_hash(password)
+    
+    def verify_password(self,password):
+        return check_password_hash(self.password_hash, password)
+
     def __repr__(self):
         return f"Name : {self.first_name}"
 
-camera = cv2.VideoCapture(0)
-# Load a sample picture and learn how to recognize it.
-krish_image = face_recognition.load_image_file("Krish/krish.jpg")
-krish_face_encoding = face_recognition.face_encodings(krish_image)[0]
 
-# Load a second sample picture and learn how to recognize it.
-bradley_image = face_recognition.load_image_file("Bradley/bradley.jpg")
-bradley_face_encoding = face_recognition.face_encodings(bradley_image)[0]
+class course(UserMixin,db.Model):
+    course_id=db.Column(db.Integer,primary_key=True)
+    course_name=db.Column(db.String(100),nullable=False)
+    # group_admin=db.Column(db.String(100),nullable=False)
+    course_link=db.Column(db.String(100),nullable=False)
+    course_teacher=db.Column(db.Integer,nullable=False)
 
-# Create arrays of known face encodings and their names
-known_face_encodings = [
-    krish_face_encoding,
-    bradley_face_encoding
-]
-known_face_names = [
-    "Krish",
-    "Bradly"
-]
-# Initialize some variables
-face_locations = []
-face_encodings = []
-face_names = []
-process_this_frame = True
+    def get_id(self):
+           return (self.course_id)
+    __bind_key__ ='course'
+    def __repr__(self):
+        return f"Name : {self.course_name}"
 
-def gen_frames():  
+
+#Setting up login manager
+login_manager=LoginManager()
+login_manager.init_app(app)
+login_manager.login_view='loginStudent'
+
+#User Loader function
+@login_manager.user_loader
+def load_user(user_id):
+    return student.query.get(int(user_id))
+
+
+# #Home Page
+# @app.route('/')
+# def index():
+#     return render_template('Students/loginStudent.html')
+
+#Student Login Page
+@app.route('/',methods=["GET","POST"])
+def loginStudent():
+    #Loading login form
+    form=Loginform()       
+    if form.validate_on_submit():
+        user=student.query.filter_by(username=form.username.data).first()
+        if user:
+            if check_password_hash(user.password_hash, form.password.data):
+                #Logging in current user
+                login_user(user)
+                return redirect(url_for('student_dashboard'))
+            else:
+                flash("Incorrect password")
+        else:
+            flash("User does not exist")
+    return render_template("Students/loginStudent.html",form=form)
+
+#Sign Up page
+@app.route('/signUp',methods=["GET","POST"])
+def signUp():
+    forms=form()
+    if forms.validate_on_submit():
+        fname=forms.first_name.data
+        lname=forms.last_name.data
+        user=forms.username.data
+        pword=forms.password_hash.data
+        pword1=forms.password_hash2.data
+
+        hashed_pword=generate_password_hash(pword,"sha256")
+
+        img = request.files['img']
+        img_filename=secure_filename(img.filename)
+        img_name=str(uuid.uuid1()) +"_" + img_filename
+        img.save(os.path.join(app.config['UPLOAD_FOLDER'],img_name))
+
+        try:
+            p = student(first_name=fname, last_name=lname, username=user,password_hash=hashed_pword,img=img_name)
+            db.session.add(p)
+            db.session.commit()
+            db.session.close()
+            return render_template('Students/success.html')
+
+        except:
+            return render_template('Students/signUp.html',form=forms)
+
+    else:
+        return render_template('Students/signUp.html',form=forms)
+
+@app.route('/student_dashboard',methods=["POST","GET"])
+@login_required
+def student_dashboard():
+    return render_template("Students/student_dashboard.html")
+
+@app.route('/success')
+def success():
+    return render_template('Student/success.html')
+
+def get_img(id):
+    user = student.query.filter_by(student_id=id).first()
+    img = user.img
+    if not img:
+        return 'Img Not Found!', 404
+    return img
+
+
+@app.route("/mark_attendance")
+@login_required
+def mark_attendance(): 
+    isPresent=False
+    camera = cv2.VideoCapture(0)
+    known_face_encodings = []
+    known_face_names = []
+    # Load a sample picture and learn how to recognize it.
+    users = student.query.filter_by(student_id=current_user.student_id).limit(3).all()
+    for user in users:
+        image_name=get_img(user.student_id)
+        image = face_recognition.load_image_file("static/profile_images/"+image_name)
+        orignal_face_encoding = face_recognition.face_encodings(image)[0]
+        known_face_encodings.append(orignal_face_encoding)
+        known_face_names.append(image_name)
+
+
+    # Create arrays of known face encodings and their names
+    
+    
+
+    process_this_frame = True
     while True:
         success, frame = camera.read()  # read the camera frame
         if not success:
@@ -69,7 +188,9 @@ def gen_frames():
             face_locations = face_recognition.face_locations(rgb_small_frame)
             face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
             face_names = []
+            
             for face_encoding in face_encodings:
+                
                 # See if the face is a match for the known face(s)
                 matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
                 name = "Unknown"
@@ -78,64 +199,40 @@ def gen_frames():
                 best_match_index = np.argmin(face_distances)
                 if matches[best_match_index]:
                     name = known_face_names[best_match_index]
-
-                face_names.append(name)
+                    if name == current_user.img:
+                        camera.release()
+                        cv2.destroyAllWindows()
+                        isPresent=True
+                        return isPresent
             
+@app.route("/myProfile")
+@login_required
+def myProfile():
+    return render_template("Students/myProfile.html")
 
-            # Display the results
-            for (top, right, bottom, left), name in zip(face_locations, face_names):
-                # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-                top *= 4
-                right *= 4
-                bottom *= 4
-                left *= 4
-
-                # Draw a box around the face
-                cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-
-                # Draw a label with a name below the face
-                cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-                font = cv2.FONT_HERSHEY_DUPLEX
-                cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
-
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-@app.route('/')
-def index():
-    return render_template('login.html')
-
-@app.route('/loginStudent')
-def loginStudent():
-    return render_template('loginStudent.html')
-
-@app.route('/signUp',methods=['POST','GET'])
-def signUp():
-    if request.method =="POST":
-        fname=request.form.get('first_name')
-        lname=request.form.get('last_name')
-        mail=request.form.get('email')
-        pno=request.form.get('phone_number')
-        new_student=Student(first_name=fName,last_name=lname,phone_number=pno,email=mail,id=id)
-        try:
-            db.session.add(new_student)
-            db.session.commit()
-            return redirect('/login')
-        except:
-            return "Sorry! Unexpected error occured. Try again."
+@app.route("/join_class",methods=["GET","POST"])
+@login_required
+def join_class():
+    forms=joinCourse()
+    if forms.validate_on_submit():
+        course_ID=forms.courseID.data
+        isPresent=mark_attendance()
+        if isPresent:
+            course_link = course.query.filter_by(course_id=course_ID).first()
+            return render_template("Students/joinLink.html",link=course_link)
+        else:
+            return render_template('Students/joinClass.html',form=forms)
     else:
-        return render_template('signUp.html')
+        return render_template('Students/joinClass.html',form=forms)
 
-@app.route('/tp')
-def tp():
-    profiles = student.query.all()
-    return render_template('tp.html', profiles=profiles)
+    return render_template("Students/joinClass.html")
 
+@app.route("/logout",methods=["GET","POST"])
+@login_required
+def logout():
+    logout_user
+    flash("You have logged out")
+    return redirect(url_for("login"))
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 if __name__=='__main__':
     app.run(debug=True)
