@@ -1,7 +1,7 @@
 from flask import Flask, render_template, Response,redirect,request,url_for,flash
 import cv2
 import face_recognition
-from datetime import datetime
+from datetime import datetime,date,time,timedelta
 from flask_login import LoginManager,current_user,login_user,login_required,UserMixin,logout_user
 from werkzeug.utils import secure_filename
 from flask_bootstrap import Bootstrap
@@ -11,13 +11,13 @@ import numpy as np
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, migrate
 from werkzeug.security import generate_password_hash,check_password_hash
-from models import Loginform,form,AdminForm,course_form
+from models import Loginform,form,AdminForm,course_form,schedule_Class
 from sqlalchemy import select,MetaData,create_engine
 
 
 app=Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///admin.db'
-app.config['SQLALCHEMY_BINDS'] ={'course' : "sqlite:///course.db"}
+app.config['SQLALCHEMY_BINDS'] ={'course' : "sqlite:///course.db",'scheduleClass' : "sqlite:///scheduleClass.db"}
 app.config['SECRET_KEY']="SECRET123"
 Bootstrap(app)
 
@@ -51,7 +51,6 @@ class admin(UserMixin,db.Model):
 class course(UserMixin,db.Model):
     course_id=db.Column(db.Integer,primary_key=True)
     course_name=db.Column(db.String(100),nullable=False)
-    # group_admin=db.Column(db.String(100),nullable=False)
     course_link=db.Column(db.String(100),nullable=False)
     course_teacher=db.Column(db.Integer,nullable=False)
     def get_id(self):
@@ -60,6 +59,16 @@ class course(UserMixin,db.Model):
     def __repr__(self):
         return f"Name : {self.course_name}"
         
+class scheduleClass(UserMixin,db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    course_ID=db.Column(db.Integer,nullable=False)
+    class_date=db.Column(db.Date,nullable=False)
+    class_start_time=db.Column(db.Time ,nullable=False)
+    class_end_time=db.Column(db.Time,nullable=False)
+    __bind_key__ ='scheduleClass'
+    def __repr__(self):
+        return f"Name : {self.id}"
+
 #Setting up login manager
 login_manager=LoginManager()
 login_manager.init_app(app)
@@ -182,6 +191,38 @@ def logout():
 def teaches():
     courses=course.query.all()
     return render_template("admn/teaches.html",courses=courses)
+
+@app.route("/allClasses")
+@login_required
+def allClasses():
+    classes=scheduleClass.query.all()
+    return render_template("admn/allClasses.html",classes=classes)
+
+@app.route("/schedule_class",methods=["GET","POST"])
+@login_required
+def schedule_class():
+    forms=schedule_Class()
+    if forms.validate_on_submit():
+        courseID=forms.courseID.data
+        class_date=forms.class_date.data
+        class_start_time=forms.class_start_time.data
+        class_end_time=forms.class_end_time.data
+
+        courses=course.query.filter_by(course_id=courseID).first()
+        if courses.course_teacher==current_user.admin_id:
+            try:
+                p = scheduleClass(course_ID=courseID, class_date=class_date,class_start_time=class_start_time,class_end_time=class_end_time)
+                db.session.add(p)
+                db.session.commit()
+                # courses=course.query.all()
+                db.session.commit()
+                return redirect(url_for("admin_dashboard"))
+
+            except:
+                return render_template('admn/scheduleClass.html',form=forms)
+
+    else:
+        return render_template('admn/scheduleClass.html',form=forms)
 
 if __name__=='__main__':
     app.run(debug=True)

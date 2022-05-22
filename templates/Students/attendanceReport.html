@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    {% include 'Students/navbar.html' %}
+    <form method="POST" enctype="multipart/form-data">
+        {{form.hidden_tag()}}
+        <div class="row">
+          <div class="col-md-6 mb-4">
+
+            <div class="form-outline">
+              {{ form.courseID.label(class="form-label") }}
+              {{ form.courseID(class="form-control form-control-lg") }}
+            </div>
+
+          </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+  
+              <div class="form-outline">
+                {{ form.class_date.label(class="form-label") }}
+                {{ form.class_date(class="form-control form-control-lg") }}
+              </div>
+  
+            </div>
+          </div>
+
+        <div class="mt-4 pt-2">
+          {{form.submit(class="btn btn-primary btn-lg")}}
+        </div>
+
+      </form>
+    <table class="table table-striped">
+        <tr>
+            <th>Course</th>
+            <th>Date</th>
+            <th>DaTimete</th>
+        </tr>
+        {% for record in attendance %}
+        <tr>
+            <td>{{record.course_id}}</td>
+            <td>{{record.date}}</td>
+            <td>{{record.time}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField,PasswordField,FileField, BooleanField,ValidationError,IntegerField
+from wtforms import StringField, SubmitField,PasswordField,FileField, BooleanField,ValidationError,IntegerField,DateField,TimeField,DateTimeField
 from wtforms.validators import DataRequired,EqualTo
 
 
@@ -35,3 +35,15 @@ class course_form(FlaskForm):
 class joinCourse(FlaskForm):
     courseID=IntegerField("Course ID",validators=[DataRequired()])
     submit=SubmitField("Submit")
+
+class schedule_Class(FlaskForm):
+    courseID=IntegerField("Course ID to schedule",validators=[DataRequired()])
+    class_date=DateField("Select Date",validators=[DataRequired()])
+    class_start_time=TimeField("Select Start Time",validators=[DataRequired()])
+    class_end_time=TimeField("Select End Time",validators=[DataRequired()])
+    submit=SubmitField("Schedule Class")
+
+class attendance_filter(FlaskForm):
+    courseID=IntegerField("Course ID",validators=[DataRequired()])
+    class_date=DateField("Select Date",validators=[DataRequired()])
+    submit=SubmitField("View Report")

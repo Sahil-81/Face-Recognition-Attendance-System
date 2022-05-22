@@ -21,9 +21,15 @@
   {% include 'Students/navbar.html' %}
   <div class="container">
     <div class="card" style="width: 18rem;">
-      <img class="card-img-top" src="./static/images/enter.png" alt="Card image cap">
+      <img class="card-img-top" src="./static/images/enter.png" alt="Card image cap">>
       <div class="card-body">
         <a href="{{url_for('join_class')}}" class="btn btn-primary">Join Class</a>
+      </div>
+    </div>
+    <div class="card" style="width: 18rem;">
+      <img class="card-img-top" src="./static/images/enter.png" alt="Card image cap">>
+      <div class="card-body">
+        <a href="{{url_for('attendance_report')}}" class="btn btn-primary">View Attendance</a>
       </div>
     </div>
   </div>

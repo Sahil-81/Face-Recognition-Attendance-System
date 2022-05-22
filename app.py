@@ -11,14 +11,15 @@ import numpy as np
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, migrate
 from werkzeug.security import generate_password_hash,check_password_hash
-from models import Loginform,form,AdminForm,course_form,joinCourse
+from models import Loginform,form,AdminForm,course_form,joinCourse,attendance_filter
 from sqlalchemy import select
 
 
 app=Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///student.db'
-app.config['SQLALCHEMY_BINDS'] ={'course' : "sqlite:///course.db"}
+app.config['SQLALCHEMY_BINDS'] ={'course' : "sqlite:///course.db",'attendance' : "sqlite:///attendance.db",'scheduleClass' : "sqlite:///scheduleClass.db"}
 app.config['SECRET_KEY']="SECRET"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = "D:\Engage\static\profile_images"
 Bootstrap(app)
 
@@ -28,6 +29,16 @@ db = SQLAlchemy(app)
 # Settings for migrations
 migrate = Migrate(app, db)
 
+class attendance(UserMixin,db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    date=db.Column(db.Date,default=datetime.now().date(),unique=False)
+    time=db.Column(db.Time,default=datetime.now().time(),unique=False)
+    student_id=db.Column(db.Integer,nullable=False,unique=False)
+    course_id=db.Column(db.Integer,nullable=False,unique=False)
+
+    __bind_key__ ='attendance'
+    def __repr__(self):
+        return f"Name : {self.id}"
 
 class student(UserMixin,db.Model):
     student_id=db.Column(db.Integer,primary_key=True)
@@ -67,6 +78,16 @@ class course(UserMixin,db.Model):
     def __repr__(self):
         return f"Name : {self.course_name}"
 
+class scheduleClass(UserMixin,db.Model):
+    id=db.Column(db.Integer,primary_key=True)
+    course_ID=db.Column(db.Integer,nullable=False)
+    class_date=db.Column(db.Date,nullable=False)
+    class_start_time=db.Column(db.Time ,nullable=False)
+    class_end_time=db.Column(db.Time,nullable=False)
+    __bind_key__ ='scheduleClass'
+    def __repr__(self):
+        return f"Name : {self.id}"
+
 
 #Setting up login manager
 login_manager=LoginManager()
@@ -78,11 +99,6 @@ login_manager.login_view='loginStudent'
 def load_user(user_id):
     return student.query.get(int(user_id))
 
-
-# #Home Page
-# @app.route('/')
-# def index():
-#     return render_template('Students/loginStudent.html')
 
 #Student Login Page
 @app.route('/',methods=["GET","POST"])
@@ -101,6 +117,18 @@ def loginStudent():
         else:
             flash("User does not exist")
     return render_template("Students/loginStudent.html",form=form)
+
+@app.route('/attendance_report',methods=["GET","POST"])
+def attendance_report():
+    forms=attendance_filter()
+    if forms.validate_on_submit():
+        course=forms.courseID.data
+        date=forms.class_date.data
+        # attendance_records=attendance.query(attendance_records).filter_by(attendance_records.student_id.like(current_user.id),attendance_records.course_id.like(course),attendance_records.date.like(date)).all()
+        attendance_records=attendance.query.filter_by(student_id=current_user.student_id,course_id=course,date=date).all()
+        return render_template("Students/attendanceReport.html",attendance=attendance_records,form=forms)
+    attendance_records=attendance.query.filter_by(student_id=current_user.student_id).all()
+    return render_template("Students/attendanceReport.html",attendance=attendance_records,form=forms)
 
 #Sign Up page
 @app.route('/signUp',methods=["GET","POST"])
@@ -216,16 +244,26 @@ def join_class():
     forms=joinCourse()
     if forms.validate_on_submit():
         course_ID=forms.courseID.data
-        isPresent=mark_attendance()
-        if isPresent:
-            course_link = course.query.filter_by(course_id=course_ID).first()
-            return render_template("Students/joinLink.html",link=course_link)
-        else:
-            return render_template('Students/joinClass.html',form=forms)
+        classes=scheduleClass.query.filter_by(course_ID=course_ID).order_by(scheduleClass.id.desc()).first()
+        current_time = datetime.now().time()
+        now=datetime.now().date()
+        print(classes.class_date==now,classes.class_start_time<current_time,classes.class_end_time>current_time)
+        if classes.class_date==now and classes.class_start_time<current_time and classes.class_end_time>current_time:
+            print("OK1")
+            isPresent=mark_attendance()
+            if isPresent:
+                p = attendance(student_id=current_user.student_id, course_id=course_ID)
+                db.session.add(p)
+                db.session.commit()
+                db.session.close()
+                course_link = course.query.filter_by(course_id=course_ID).first()
+                return render_template("Students/joinLink.html",link=course_link)
+            else:
+                return render_template('Students/joinClass.html',form=forms)
     else:
         return render_template('Students/joinClass.html',form=forms)
 
-    return render_template("Students/joinClass.html")
+    return render_template('Students/joinClass.html',form=forms)
 
 @app.route("/logout",methods=["GET","POST"])
 @login_required
