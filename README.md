@@ -18,9 +18,9 @@ For using face-recognition you need to follow certain steps.
 
 1. Install Microsoft Visual Studio Commmunity version from [here](https://visualstudio.microsoft.com/).
 2. Launch the app and complete setup.
-3. Install Desktop C++ from the app.
+3. Install Desktop development C++ from the app.
 4. Open command prompt and install cmake library using command pip install cmake.
-5. Install dlib library using command pip install pip install dlib.
+5. Install dlib library using command pip install dlib.
 6. Finally install face-recognition library using command pip install face-recognintion.
 
 ## Insatlling libraries:
@@ -35,11 +35,18 @@ All the libraries required for web app to run are mentioned in requirements.txt.
 1. Open command prompt.
 2. Browse to the folder where the project is located.
 3. Use following commands to create database files.
+
 python
+
 from app import db
+
 db.create_all()
+
 from app1 import db
+
 db.create_all()
+
+exit()
 
 Database file should appear in your project folder after these steps.
 
