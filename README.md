@@ -58,5 +58,5 @@ Database file should appear in your project folder after these steps.
 
 ## Launch app:
  
-After you are done with all steps mentioned above you can run app_student file(for student interface), app_teacher file(for teacher interface). You will get a local host link in the terminal. Just open that link in browser to use the app.
+After you are done with all steps mentioned above you can run app_student file(for student interface), app_teacher file(for teacher interface). You will get a local host link in the terminal. Just open that link in browser to use the app. (Note:- Minimum 3 students must be registered for marking attendance to work.)
 
