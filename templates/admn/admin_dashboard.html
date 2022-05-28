@@ -1,0 +1,64 @@
+{% block content%}
+
+{% endblock %}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="static\css\student_dashboad.css">
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Dashboard</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+    integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+</head>
+
+<body>
+  {% include 'admn/navbar.html' %}
+  {% for message in get_flashed_messages() %}
+  <div class="alert alert-success d-flex align-items-center" role="alert">
+    <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Danger:">
+      <use xlink:href="#exclamation-triangle-fill" />
+    </svg>
+    <div>
+      {{message}}
+    </div>
+  </div>
+  </div>
+  {% endfor %}
+  <div class="container">
+    <div class="card" style="width: 18rem;">
+      <img class="card-img-top" src="./static/images/enter.png" alt="Card image cap">
+      <div class="card-body">
+        <a href="{{url_for('add_course')}}" class="btn btn-primary">Add Course</a>
+      </div>
+    </div>
+    <div class="card" style="width: 18rem;">
+      <img class="card-img-top" src="./static/images/enter.png" alt="Card image cap">
+      <div class="card-body">
+        <a href="{{url_for('schedule_class')}}" class="btn btn-primary">Schedule Class</a>
+      </div>
+    </div>
+    <div class="card" style="width: 18rem;">
+      <img class="card-img-top" src="./static/images/report.jpg" alt="Card image cap">
+      <div class="card-body">
+        <a href="{{url_for('attendance_report')}}" class="btn btn-primary">View Attendance</a>
+      </div>
+    </div>
+    <div class="card" style="width: 18rem;">
+      <img class="card-img-top" src="./static/images/report.jpg" alt="Card image cap">
+      <div class="card-body">
+        <a href="{{url_for('my_courses')}}" class="btn btn-primary">My courses</a>
+      </div>
+    </div>
+  </div>
+
+
+
+</body>
+
+</html>
